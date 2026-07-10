@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.admin_slug_matches(text) FROM PUBLIC, anon, authenticated;

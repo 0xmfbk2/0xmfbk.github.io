@@ -1,0 +1,1 @@
+GRANT SELECT, UPDATE ON public.admin_slug TO service_role;
