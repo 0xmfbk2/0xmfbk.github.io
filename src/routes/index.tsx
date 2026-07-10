@@ -22,13 +22,13 @@ export const Route = createFileRoute("/")({
   }),
   head: () => ({
     meta: [
-      { title: "0xmfbk.sec // Mustafa Faek Banikhalaf — Cybersecurity Associate" },
+      { title: "0xmfbk.sec" },
       {
         name: "description",
         content:
           "Offensive & Defensive Security — Web Application Penetration Testing, OWASP Top 10 vulnerability assessment, and custom security scripting using Python.",
       },
-      { property: "og:title", content: "0xmfbk.sec — Mustafa Faek Banikhalaf" },
+      { property: "og:title", content: "0xmfbk.sec" },
       {
         property: "og:description",
         content:
