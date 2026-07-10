@@ -77,21 +77,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "0xmfbk.dev // Mustafa Faek Banikhalaf — Cybersecurity Associate" },
+      { title: "0xmfbk.sec" },
       {
         name: "description",
         content:
           "Offensive & Defensive Security — Web Application Penetration Testing, OWASP Top 10 vulnerability assessment, and custom security scripting using Python.",
       },
       { name: "theme-color", content: "#0d0e12" },
-      { property: "og:title", content: "0xmfbk.dev — Mustafa Faek Banikhalaf" },
+      { property: "og:title", content: "0xmfbk.sec" },
       {
         property: "og:description",
         content: "Offensive & Defensive Security — Web Application Penetration Testing, OWASP Top 10, and Python security scripting.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "0xmfbk.dev — Mustafa Faek Banikhalaf" },
+      { name: "twitter:title", content: "0xmfbk.sec" },
       { name: "twitter:description", content: "Offensive & Defensive Security writeups by Mustafa Faek Banikhalaf." },
     ],
     links: [
