@@ -1,1 +1,0 @@
-GRANT EXECUTE ON FUNCTION public.admin_slug_matches(text) TO anon, authenticated;
