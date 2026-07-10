@@ -1,12 +1,16 @@
 {
-  "name": "your-repo-name",
-  "homepage": "https://0xmfbk.github.io/mbk/",
+  "name": "tanstack_start_ts",
+  "private": true,
+  "sideEffects": false,
+  "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite dev",
     "build": "vite build",
+    "build:dev": "vite build --mode development",
     "preview": "vite preview",
-    "predeploy": "bun run build",
-    "deploy": "gh-pages -d dist"
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "start": "node .output/server/index.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
