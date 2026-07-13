@@ -341,3 +341,35 @@ export const getPostViewLog = createServerFn({ method: "GET" })
     if (error) throw error;
     return rows ?? [];
   });
+export const exportPostViews = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw) => z.object({ post_id: z.string().uuid().optional() }).parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let query = supabaseAdmin
+      .from("post_views")
+      .select(
+        "id, post_id, ip_address, user_agent, referrer, is_bot, viewed_at, posts(slug, title)",
+      )
+      .order("viewed_at", { ascending: false })
+      .limit(10000); // سقف أمان — يمنع تحميل ملايين الصفوف بضغطة وحدة بدون قصد
+    if (data.post_id) query = query.eq("post_id", data.post_id);
+    const { data: rows, error } = await query;
+    if (error) throw error;
+    return rows ?? [];
+  });
+export const clearPostViews = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw) =>
+    z.object({ post_id: z.string().uuid().optional(), confirm: z.literal(true) }).parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let query = supabaseAdmin.from("post_views").delete();
+    query = data.post_id ? query.eq("post_id", data.post_id) : query.gte("viewed_at", "1970-01-01");
+    const { error } = await query;
+    if (error) throw error;
+    return { ok: true };
+  });

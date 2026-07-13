@@ -1,14 +1,52 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { getViewStats, getPostViewLog } from "@/lib/admin.functions";
+import {
+  getViewStats,
+  getPostViewLog,
+  exportPostViews,
+  clearPostViews,
+} from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin/analytics")({
   component: Analytics,
 });
 
+function downloadFile(content: string, filename: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function handleExport(format: "json" | "ndjson", postId?: string) {
+  const rows = await exportPostViews({ data: { post_id: postId } });
+  const stamp = new Date().toISOString().slice(0, 10);
+  if (format === "json") {
+    downloadFile(JSON.stringify(rows, null, 2), `post-views-${stamp}.json`, "application/json");
+  } else {
+    const ndjson = rows.map((r: any) => JSON.stringify(r)).join("\n");
+    downloadFile(ndjson, `post-views-${stamp}.ndjson`, "application/x-ndjson");
+  }
+}
+
+async function handleClear(postId?: string, onDone?: () => void) {
+  const label = postId ? "هذا المقال" : "كل السجلات بالموقع";
+  const typed = window.prompt(`اكتب "DELETE" للتأكيد — رح تُحذف سجلات ${label} نهائياً`);
+  if (typed !== "DELETE") return;
+  await clearPostViews({ data: { post_id: postId, confirm: true } });
+  onDone?.();
+}
+
 function Analytics() {
-  const { data: stats, isLoading } = useQuery({
+  const {
+    data: stats,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-views"],
     queryFn: () => getViewStats(),
   });
@@ -26,10 +64,31 @@ function Analytics() {
         Analytics <span className="mono text-terminal">_</span>
       </h1>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
         <StatCard label="total posts tracked" value={stats?.length ?? 0} />
         <StatCard label="total views" value={totalViews} />
         <StatCard label="unique visitors" value={totalUnique} />
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-10">
+        <button
+          onClick={() => handleExport("json")}
+          className="mono text-[11px] uppercase tracking-[0.14em] rounded-md border border-border px-3 py-1.5 hover:border-terminal/50 hover:text-terminal transition"
+        >
+          export json
+        </button>
+        <button
+          onClick={() => handleExport("ndjson")}
+          className="mono text-[11px] uppercase tracking-[0.14em] rounded-md border border-border px-3 py-1.5 hover:border-terminal/50 hover:text-terminal transition"
+        >
+          export ndjson (splunk)
+        </button>
+        <button
+          onClick={() => handleClear(undefined, refetch)}
+          className="mono text-[11px] uppercase tracking-[0.14em] rounded-md border border-destructive/50 text-destructive px-3 py-1.5 hover:bg-destructive/10 transition"
+        >
+          clear all logs
+        </button>
       </div>
 
       {isLoading && <p className="mono text-xs text-terminal animate-pulse">loading manifest…</p>}
@@ -65,7 +124,7 @@ function Analytics() {
                     <td className="px-4 py-3 text-right mono text-[11px] text-muted-foreground">
                       {s.last_viewed_at ? new Date(s.last_viewed_at).toLocaleString() : "—"}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
                       <button
                         onClick={() =>
                           setSelectedPostId(selectedPostId === s.post_id ? null : s.post_id)
@@ -73,6 +132,12 @@ function Analytics() {
                         className="mono text-[11px] uppercase tracking-[0.14em] text-terminal hover:underline"
                       >
                         {selectedPostId === s.post_id ? "hide log" : "view log"}
+                      </button>
+                      <button
+                        onClick={() => handleClear(s.post_id, refetch)}
+                        className="mono text-[11px] uppercase tracking-[0.14em] text-destructive/70 hover:text-destructive hover:underline ml-3"
+                      >
+                        clear
                       </button>
                     </td>
                   </tr>

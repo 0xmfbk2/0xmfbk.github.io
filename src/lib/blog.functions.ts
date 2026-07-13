@@ -6,7 +6,6 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { getRequestHeader, getRequestIP } from "@tanstack/react-start/server";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 function serverPublicClient() {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -212,43 +211,41 @@ export const resolveAdminSlug = createServerFn({ method: "GET" })
     }
   });
 
+const BOT_UA_PATTERN =
+  /bot|crawler|spider|curl|wget|python-requests|scrapy|headless|monitor|pingdom|uptimerobot/i;
+
 export const recordPostView = createServerFn({ method: "POST" })
   .inputValidator((raw) => z.object({ post_id: z.string().uuid() }).parse(raw))
   .handler(async ({ data }) => {
     const ip = getRequestIP({ xForwardedFor: true }) || "0.0.0.0";
     const userAgent = getRequestHeader("user-agent") ?? null;
     const referrer = getRequestHeader("referer") ?? null;
+    const isBot = userAgent ? BOT_UA_PATTERN.test(userAgent) : false;
 
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      await supabaseAdmin.from("post_views").insert({
-        post_id: data.post_id,
-        ip_address: ip,
-        user_agent: userAgent,
-        referrer,
-      });
+
+      // Flood protection: skip if this IP already viewed this post in the last 30 min
+      const { data: recent } = await supabaseAdmin
+        .from("post_views")
+        .select("id")
+        .eq("post_id", data.post_id)
+        .eq("ip_address", ip)
+        .gte("viewed_at", new Date(Date.now() - 30 * 60 * 1000).toISOString())
+        .limit(1)
+        .maybeSingle();
+
+      if (!recent) {
+        await supabaseAdmin.from("post_views").insert({
+          post_id: data.post_id,
+          ip_address: ip,
+          user_agent: userAgent,
+          referrer,
+          is_bot: isBot,
+        });
+      }
     } catch (err) {
       console.error("[recordPostView] insert failed:", err);
     }
     return { ok: true };
-  });
-
-export const getPostViewLog = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((raw) =>
-    z
-      .object({ post_id: z.string().uuid(), limit: z.number().int().min(1).max(200).default(100) })
-      .parse(raw),
-  )
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: rows, error } = await supabaseAdmin
-      .from("post_views")
-      .select("id, ip_address, user_agent, referrer, viewed_at")
-      .eq("post_id", data.post_id)
-      .order("viewed_at", { ascending: false })
-      .limit(data.limit);
-    if (error) throw error;
-    return rows ?? [];
   });
