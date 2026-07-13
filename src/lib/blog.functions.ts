@@ -5,7 +5,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
-import { getWebRequest } from "@tanstack/react-start/server";
+import { getRequestHeader, getRequestIP } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 function serverPublicClient() {
@@ -215,11 +215,9 @@ export const resolveAdminSlug = createServerFn({ method: "GET" })
 export const recordPostView = createServerFn({ method: "POST" })
   .inputValidator((raw) => z.object({ post_id: z.string().uuid() }).parse(raw))
   .handler(async ({ data }) => {
-    const request = getWebRequest();
-    const forwarded = request?.headers.get("x-forwarded-for");
-    const ip = forwarded?.split(",")[0]?.trim() || request?.headers.get("x-real-ip") || "0.0.0.0";
-    const userAgent = request?.headers.get("user-agent") ?? null;
-    const referrer = request?.headers.get("referer") ?? null;
+    const ip = getRequestIP({ xForwardedFor: true }) || "0.0.0.0";
+    const userAgent = getRequestHeader("user-agent") ?? null;
+    const referrer = getRequestHeader("referer") ?? null;
 
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -230,7 +228,6 @@ export const recordPostView = createServerFn({ method: "POST" })
         referrer,
       });
     } catch (err) {
-      // فشل تسجيل الزيارة ما لازم يكسر الصفحة للزائر
       console.error("[recordPostView] insert failed:", err);
     }
     return { ok: true };
