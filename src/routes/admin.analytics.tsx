@@ -34,8 +34,8 @@ async function handleExport(format: "json" | "ndjson", postId?: string) {
 }
 
 async function handleClear(postId?: string, onDone?: () => void) {
-  const label = postId ? "هذا المقال" : "كل السجلات بالموقع";
-  const typed = window.prompt(`اكتب "DELETE" للتأكيد — رح تُحذف سجلات ${label} نهائياً`);
+  const label = postId ? "this article" : "all site records";
+  const typed = window.prompt(`Type "DELETE" to confirm — ${label} will be permanently deleted`);
   if (typed !== "DELETE") return;
   await clearPostViews({ data: { post_id: postId, confirm: true } });
   onDone?.();
