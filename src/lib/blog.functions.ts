@@ -5,13 +5,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
+import { getWebRequest } from "@tanstack/react-start/server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 function serverPublicClient() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-  );
+  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
 }
 
 export type PostCard = {
@@ -51,7 +51,11 @@ export const listPublishedPosts = createServerFn({ method: "GET" })
       .range(data.offset, data.offset + data.limit - 1);
 
     if (data.categorySlug) {
-      const { data: cat } = await sb.from("categories").select("id").eq("slug", data.categorySlug).maybeSingle();
+      const { data: cat } = await sb
+        .from("categories")
+        .select("id")
+        .eq("slug", data.categorySlug)
+        .maybeSingle();
       if (cat) query = query.eq("category_id", cat.id);
     }
     if (data.tagSlug) query = query.eq("post_tags.tags.slug", data.tagSlug);
@@ -61,9 +65,12 @@ export const listPublishedPosts = createServerFn({ method: "GET" })
     // without the join in that case.
     if (!data.tagSlug) {
       let q2 = (sb.from("posts") as any)
-        .select("id, slug, title, excerpt, cover_url, published_at, reading_minutes, is_pinned, priority, categories(slug, name)", {
-          count: "exact",
-        })
+        .select(
+          "id, slug, title, excerpt, cover_url, published_at, reading_minutes, is_pinned, priority, categories(slug, name)",
+          {
+            count: "exact",
+          },
+        )
         .eq("status", "published")
         .is("deleted_at", null)
         .lte("published_at", new Date().toISOString())
@@ -72,7 +79,11 @@ export const listPublishedPosts = createServerFn({ method: "GET" })
         .order("published_at", { ascending: false })
         .range(data.offset, data.offset + data.limit - 1);
       if (data.categorySlug) {
-        const { data: cat } = await sb.from("categories").select("id").eq("slug", data.categorySlug).maybeSingle();
+        const { data: cat } = await sb
+          .from("categories")
+          .select("id")
+          .eq("slug", data.categorySlug)
+          .maybeSingle();
         if (cat) q2 = q2.eq("category_id", cat.id);
       }
       const { data: rows, count, error } = await q2;
@@ -168,7 +179,10 @@ export const getPostBySlug = createServerFn({ method: "GET" })
 
 export const listCategories = createServerFn({ method: "GET" }).handler(async () => {
   const sb = serverPublicClient();
-  const { data, error } = await sb.from("categories").select("id, slug, name, parent_id, description").order("sort_order");
+  const { data, error } = await sb
+    .from("categories")
+    .select("id, slug, name, parent_id, description")
+    .order("sort_order");
   if (error) throw error;
   return data ?? [];
 });
@@ -187,7 +201,9 @@ export const resolveAdminSlug = createServerFn({ method: "GET" })
     // the admin client. This runs server-side only and never exposes the key.
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: ok, error } = await supabaseAdmin.rpc("admin_slug_matches", { _slug: data.slug });
+      const { data: ok, error } = await supabaseAdmin.rpc("admin_slug_matches", {
+        _slug: data.slug,
+      });
       if (error) throw error;
       return { ok: !!ok };
     } catch (err) {
@@ -196,3 +212,46 @@ export const resolveAdminSlug = createServerFn({ method: "GET" })
     }
   });
 
+export const recordPostView = createServerFn({ method: "POST" })
+  .inputValidator((raw) => z.object({ post_id: z.string().uuid() }).parse(raw))
+  .handler(async ({ data }) => {
+    const request = getWebRequest();
+    const forwarded = request?.headers.get("x-forwarded-for");
+    const ip = forwarded?.split(",")[0]?.trim() || request?.headers.get("x-real-ip") || "0.0.0.0";
+    const userAgent = request?.headers.get("user-agent") ?? null;
+    const referrer = request?.headers.get("referer") ?? null;
+
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.from("post_views").insert({
+        post_id: data.post_id,
+        ip_address: ip,
+        user_agent: userAgent,
+        referrer,
+      });
+    } catch (err) {
+      // فشل تسجيل الزيارة ما لازم يكسر الصفحة للزائر
+      console.error("[recordPostView] insert failed:", err);
+    }
+    return { ok: true };
+  });
+
+export const getPostViewLog = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw) =>
+    z
+      .object({ post_id: z.string().uuid(), limit: z.number().int().min(1).max(200).default(100) })
+      .parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("post_views")
+      .select("id, ip_address, user_agent, referrer, viewed_at")
+      .eq("post_id", data.post_id)
+      .order("viewed_at", { ascending: false })
+      .limit(data.limit);
+    if (error) throw error;
+    return rows ?? [];
+  });

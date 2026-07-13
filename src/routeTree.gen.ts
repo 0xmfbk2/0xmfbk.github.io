@@ -20,6 +20,7 @@ import { Route as PostsSlugRouteImport } from './routes/posts.$slug'
 import { Route as CategoriesSlugRouteImport } from './routes/categories.$slug'
 import { Route as AdminTaxonomyRouteImport } from './routes/admin.taxonomy'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminPostsIndexRouteImport } from './routes/admin.posts.index'
 import { Route as AdminPostsNewRouteImport } from './routes/admin.posts.new'
 import { Route as AdminPostsIdRouteImport } from './routes/admin.posts.$id'
@@ -79,6 +80,11 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPostsIndexRoute = AdminPostsIndexRouteImport.update({
   id: '/posts/',
   path: '/posts/',
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/categories/$slug': typeof CategoriesSlugRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/categories/$slug': typeof CategoriesSlugRoute
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/categories/$slug': typeof CategoriesSlugRoute
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/admin/analytics'
     | '/admin/settings'
     | '/admin/taxonomy'
     | '/categories/$slug'
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/admin/analytics'
     | '/admin/settings'
     | '/admin/taxonomy'
     | '/categories/$slug'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/admin/analytics'
     | '/admin/settings'
     | '/admin/taxonomy'
     | '/categories/$slug'
@@ -283,6 +295,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/analytics': {
+      id: '/admin/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/posts/': {
       id: '/admin/posts/'
       path: '/posts'
@@ -308,6 +327,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminTaxonomyRoute: typeof AdminTaxonomyRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -317,6 +337,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminTaxonomyRoute: AdminTaxonomyRoute,
   AdminIndexRoute: AdminIndexRoute,

@@ -124,6 +124,14 @@ function AdminLayout() {
               taxonomy
             </Link>
             <Link
+              to="/admin/analytics"
+              activeOptions={{ exact: false }}
+              activeProps={{ className: "text-terminal bg-accent/40" }}
+              className="rounded-sm px-2 py-1 text-muted-foreground hover:text-terminal hover:bg-accent/40 transition"
+            >
+              analytics
+            </Link>
+            <Link
               to="/admin/settings"
               activeOptions={{ exact: false }}
               activeProps={{ className: "text-terminal bg-accent/40" }}

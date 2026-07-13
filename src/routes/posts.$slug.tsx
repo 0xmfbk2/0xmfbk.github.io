@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { AuthorCard } from "@/components/author-card";
-import { getPostBySlug } from "@/lib/blog.functions";
+import { getPostBySlug, recordPostView } from "@/lib/blog.functions";
 
 const postOpts = (slug: string) =>
   queryOptions({
@@ -36,9 +37,7 @@ export const Route = createFileRoute("/posts/$slug")({
     if (img) meta.push({ property: "og:image", content: img });
     return {
       meta,
-      links: [
-        { rel: "canonical", href: loaderData.canonical_url ?? `/posts/${params.slug}` },
-      ],
+      links: [{ rel: "canonical", href: loaderData.canonical_url ?? `/posts/${params.slug}` }],
       scripts: [
         {
           type: "application/ld+json",
@@ -65,6 +64,10 @@ function PostPage() {
   const params = Route.useParams();
   const { data: post } = useSuspenseQuery(postOpts(params.slug));
 
+  useEffect(() => {
+    recordPostView({ data: { post_id: post.id } }).catch(() => {});
+  }, [post.id]);
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <SiteHeader />
@@ -72,7 +75,9 @@ function PostPage() {
         <article>
           <header className="mb-10">
             <div className="mono text-[11px] uppercase tracking-[0.24em] text-terminal-dim mb-4">
-              <Link to="/posts" className="hover:text-terminal">~/posts</Link>{" "}
+              <Link to="/posts" className="hover:text-terminal">
+                ~/posts
+              </Link>{" "}
               <span className="text-terminal">/</span> {params.slug}
             </div>
             <div className="mb-5 flex flex-wrap items-center gap-2 mono text-[11px] uppercase tracking-[0.14em]">
@@ -131,7 +136,6 @@ function PostPage() {
             </footer>
           )}
         </article>
-
       </main>
       <SiteFooter />
     </div>
@@ -144,8 +148,12 @@ function PostNotFound() {
       <SiteHeader />
       <main className="flex-1 mx-auto max-w-3xl px-4 py-24 text-center">
         <h1 className="text-3xl font-semibold">Post not found</h1>
-        <p className="mt-2 text-muted-foreground">This writeup doesn't exist or has been unpublished.</p>
-        <Link to="/posts" className="mt-6 inline-block text-sm underline">Back to all posts</Link>
+        <p className="mt-2 text-muted-foreground">
+          This writeup doesn't exist or has been unpublished.
+        </p>
+        <Link to="/posts" className="mt-6 inline-block text-sm underline">
+          Back to all posts
+        </Link>
       </main>
       <SiteFooter />
     </div>

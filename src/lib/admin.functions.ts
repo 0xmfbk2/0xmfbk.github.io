@@ -35,7 +35,12 @@ async function assertAdmin(ctx: { supabase: any; userId: string; claims?: any })
 const postInput = z.object({
   id: z.string().uuid().optional(),
   title: z.string().trim().min(1).max(240),
-  slug: z.string().trim().min(1).max(120).regex(/^[a-z0-9-]+$/, "invalid slug"),
+  slug: z
+    .string()
+    .trim()
+    .min(1)
+    .max(120)
+    .regex(/^[a-z0-9-]+$/, "invalid slug"),
   excerpt: z.string().max(500).optional().nullable(),
   content_md: z.string().max(200_000),
   cover_url: z.string().url().max(2000).optional().nullable(),
@@ -69,8 +74,8 @@ export const savePost = createServerFn({ method: "POST" })
       scheduled_for: data.scheduled_for ?? null,
       published_at:
         data.status === "published"
-          ? data.published_at ?? new Date().toISOString()
-          : data.published_at ?? null,
+          ? (data.published_at ?? new Date().toISOString())
+          : (data.published_at ?? null),
       seo_title: data.seo_title ?? null,
       seo_description: data.seo_description ?? null,
       canonical_url: data.canonical_url ?? null,
@@ -119,7 +124,9 @@ export const listAllPosts = createServerFn({ method: "GET" })
     await assertAdmin(context);
     const { data, error } = await context.supabase
       .from("posts")
-      .select("id, slug, title, status, published_at, scheduled_for, updated_at, is_pinned, priority")
+      .select(
+        "id, slug, title, status, published_at, scheduled_for, updated_at, is_pinned, priority",
+      )
       .is("deleted_at", null)
       .order("is_pinned", { ascending: false })
       .order("priority", { ascending: false })
@@ -201,7 +208,13 @@ export const listRevisions = createServerFn({ method: "GET" })
 const taxInput = z.object({
   id: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(80),
-  slug: z.string().trim().min(1).max(80).regex(/^[a-z0-9-]+$/).optional(),
+  slug: z
+    .string()
+    .trim()
+    .min(1)
+    .max(80)
+    .regex(/^[a-z0-9-]+$/)
+    .optional(),
   parent_id: z.string().uuid().optional().nullable(),
   description: z.string().max(500).optional().nullable(),
 });
@@ -212,7 +225,12 @@ export const saveCategory = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const slug = data.slug ?? slugify(data.name);
-    const payload = { name: data.name, slug, parent_id: data.parent_id ?? null, description: data.description ?? null };
+    const payload = {
+      name: data.name,
+      slug,
+      parent_id: data.parent_id ?? null,
+      description: data.description ?? null,
+    };
     if (data.id) {
       const { error } = await context.supabase.from("categories").update(payload).eq("id", data.id);
       if (error) throw error;
@@ -225,12 +243,19 @@ export const saveCategory = createServerFn({ method: "POST" })
 
 export const saveTag = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw) => z.object({ id: z.string().uuid().optional(), name: z.string().trim().min(1).max(60) }).parse(raw))
+  .inputValidator((raw) =>
+    z
+      .object({ id: z.string().uuid().optional(), name: z.string().trim().min(1).max(60) })
+      .parse(raw),
+  )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const slug = slugify(data.name);
     if (data.id) {
-      const { error } = await context.supabase.from("tags").update({ name: data.name, slug }).eq("id", data.id);
+      const { error } = await context.supabase
+        .from("tags")
+        .update({ name: data.name, slug })
+        .eq("id", data.id);
       if (error) throw error;
     } else {
       const { error } = await context.supabase.from("tags").insert({ name: data.name, slug });
@@ -279,4 +304,40 @@ export const rotateAdminSlug = createServerFn({ method: "POST" })
     const { data, error } = await supabaseAdmin.rpc("rotate_admin_slug");
     if (error) throw error;
     return { slug: data as string };
+  });
+export const getViewStats = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin.rpc("get_post_view_stats");
+    if (error) throw error;
+    return (data ?? []) as {
+      post_id: string;
+      slug: string;
+      title: string;
+      total_views: number;
+      unique_visitors: number;
+      last_viewed_at: string | null;
+    }[];
+  });
+
+export const getPostViewLog = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw) =>
+    z
+      .object({ post_id: z.string().uuid(), limit: z.number().int().min(1).max(200).default(100) })
+      .parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("post_views")
+      .select("id, ip_address, user_agent, referrer, viewed_at")
+      .eq("post_id", data.post_id)
+      .order("viewed_at", { ascending: false })
+      .limit(data.limit);
+    if (error) throw error;
+    return rows ?? [];
   });
