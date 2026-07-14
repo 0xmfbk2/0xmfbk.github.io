@@ -264,7 +264,7 @@ export const saveTag = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const deleteCategory = createServerFn({ method: "POST" })
+export const deleteCategory = createServerFn({ method: "DELETE" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw) => z.object({ id: z.string().uuid() }).parse(raw))
   .handler(async ({ data, context }) => {
@@ -274,7 +274,7 @@ export const deleteCategory = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const deleteTag = createServerFn({ method: "POST" })
+export const deleteTag = createServerFn({ method: "DELETE" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw) => z.object({ id: z.string().uuid() }).parse(raw))
   .handler(async ({ data, context }) => {
