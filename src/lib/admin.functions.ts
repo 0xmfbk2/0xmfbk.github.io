@@ -181,10 +181,7 @@ export const deletePost = createServerFn({ method: "POST" })
   .inputValidator((raw) => z.object({ id: z.string().uuid() }).parse(raw))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { error } = await context.supabase
-      .from("posts")
-      .update({ deleted_at: new Date().toISOString(), status: "archived" })
-      .eq("id", data.id);
+    const { error } = await context.supabase.from("posts").delete().eq("id", data.id);
     if (error) throw error;
     return { ok: true };
   });
