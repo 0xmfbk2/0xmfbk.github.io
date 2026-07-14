@@ -87,12 +87,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "0xmfbk.sec" },
       {
         property: "og:description",
-        content: "Offensive & Defensive Security — Web Application Penetration Testing, OWASP Top 10, and Python security scripting.",
+        content:
+          "Offensive & Defensive Security — Web Application Penetration Testing, OWASP Top 10, and Python security scripting.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "0xmfbk.sec" },
-      { name: "twitter:description", content: "Offensive & Defensive Security writeups by Mustafa Faek Banikhalaf." },
+      {
+        name: "twitter:description",
+        content: "Offensive & Defensive Security writeups by Mustafa Faek Banikhalaf.",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -113,7 +117,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
         <script
